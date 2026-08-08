@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+datos.db
+kit/
+bench_*.json
+calidad_*.json
+salida_*.txt
+bootstrap_*.py
+fix_*.py
+chunks_reales.json
+.env

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agente de seguimiento postoperatorio</title>
+<style>
+:root{--bg:#12141a;--panel:#1a1d26;--line:#2a2f3d;--tx:#e8eaf0;--mut:#8b93a7;
+--ok:#3fb950;--warn:#d29922;--bad:#f85149;--acc:#4a9eff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);
+font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:14px 22px;border-bottom:1px solid var(--line);display:flex;
+align-items:center;gap:20px;flex-wrap:wrap}
+h1{font-size:16px;margin:0;font-weight:600}
+.tabs{display:flex;gap:6px;margin-left:auto}
+.tab{padding:7px 16px;border:1px solid var(--line);background:none;color:var(--mut);
+border-radius:6px;cursor:pointer;font-size:14px}
+.tab.on{background:var(--acc);border-color:var(--acc);color:#fff}
+main{padding:22px;max-width:1240px;margin:0 auto}
+.vista{display:none}.vista.on{display:block}
+.grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+@media(max-width:940px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:16px;margin-bottom:16px}
+.card h2{font-size:13px;margin:0 0 12px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+button{background:var(--acc);color:#fff;border:0;padding:9px 18px;border-radius:6px;
+cursor:pointer;font-size:14px}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.sec{background:#2a2f3d}button.rec{background:var(--bad)}
+select,input[type=text]{background:#0e1015;color:var(--tx);border:1px solid var(--line);
+padding:8px 10px;border-radius:6px;font-size:14px;width:100%}
+#chat{height:400px;overflow-y:auto;padding:6px}
+.msg{margin-bottom:12px;max-width:80%;padding:9px 13px;border-radius:10px;font-size:14px}
+.ag{background:#232838;border-left:3px solid var(--acc)}
+.pa{background:#1e2a1e;border-left:3px solid var(--ok);margin-left:auto}
+.who{font-size:11px;color:var(--mut);margin-bottom:3px}
+.badge{display:inline-block;padding:3px 11px;border-radius:12px;font-size:12px;font-weight:600}
+.verde{background:#123d1a;color:var(--ok)}.amarillo{background:#3d3312;color:var(--warn)}
+.rojo{background:#3d1618;color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:500;font-size:12px}
+.pill{font-size:11px;padding:2px 8px;border-radius:10px;background:#123d1a;color:var(--ok)}
+.pill.no{background:#3d1618;color:var(--bad)}
+.mut{color:var(--mut);font-size:13px}
+.fuente{font-size:12px;padding:7px 9px;background:#0e1015;border-radius:5px;margin-bottom:6px;
+border-left:2px solid var(--acc)}
+.kv{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.dz{border:2px dashed var(--line);border-radius:8px;padding:26px;text-align:center;color:var(--mut);cursor:pointer}
+.dz:hover{border-color:var(--acc)}
+#estado{font-size:13px;color:var(--mut);min-height:20px}
+.regla{font-size:12px;color:var(--mut);padding:4px 0;border-bottom:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Agente de seguimiento postoperatorio</h1>
+  <span class="mut" id="salud">…</span>
+  <div class="tabs">
+    <button class="tab on" data-v="llamada">Interfaz de llamada</button>
+    <button class="tab" data-v="consola">Consola de administración</button>
+  </div>
+</header>
+
+<main>
+<!-- ================= LLAMADA ================= -->
+<section id="v-llamada" class="vista on">
+<div class="grid">
+  <div>
+    <div class="card">
+      <h2>Llamada</h2>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:220px">
+          <label class="mut">Paciente</label>
+          <select id="paciente"></select>
+        </div>
+        <button id="btnIniciar">Iniciar llamada</button>
+        <button id="btnColgar" class="sec" disabled>Colgar</button>
+      </div>
+      <div id="estado" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Conversación</h2>
+      <div id="chat"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="btnMic" disabled>🎤 Hablar</button>
+        <input type="text" id="txt" placeholder="…o escriba aquí y presione Enter" disabled>
+      </div>
+      <div class="mut" style="margin-top:8px;font-size:12px">
+        La voz usa Web Speech API del navegador (Chrome o Edge). El campo de texto es respaldo.
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Triaje en tiempo real</h2>
+      <div id="triaje"><span class="mut">Sin llamada activa</span></div>
+      <div id="reglas" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h2>Síntomas capturados</h2>
+      <div id="sintomas"><span class="mut">—</span></div>
+    </div>
+    <div class="card">
+      <h2>Fuentes citadas (trazabilidad)</h2>
+      <div id="fuentes"><span class="mut">—</span></div>
+    </div>
+    <div class="card">
+      <h2>Resumen de la llamada</h2>
+      <div id="resumen"><span class="mut">Al cerrar la llamada</span></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ================= CONSOLA ================= -->
+<section id="v-consola" class="vista">
+<div class="card">
+  <h2>Subir documento clínico</h2>
+  <div class="dz" id="dz">Haga clic o arrastre un PDF aquí<br>
+    <span style="font-size:12px">El agente lo aprende de inmediato</span></div>
+  <input type="file" id="file" accept=".pdf" style="display:none">
+  <div id="subida" style="margin-top:12px"></div>
+</div>
+
+<div class="card">
+  <h2>Base de conocimiento</h2>
+  <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+    <button id="btnCorpus" class="sec">Cargar corpus del reto</button>
+    <button id="btnRefrescar" class="sec">Refrescar</button>
+    <input type="text" id="filtro" placeholder="Filtrar…" style="flex:1;min-width:180px">
+  </div>
+  <div style="max-height:440px;overflow-y:auto">
+    <table><thead><tr>
+      <th>Documento</th><th>Área</th><th>Frag.</th><th>Estado</th><th></th>
+    </tr></thead><tbody id="docs"></tbody></table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Cobertura por procedimiento</h2>
+  <table><thead><tr><th>Procedimiento</th><th>Cobertura</th><th>Área / motivo</th></tr></thead>
+  <tbody id="cobertura"></tbody></table>
+</div>
+</section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const API = '';
+let llamadaId = null, escuchando = false, recog = null;
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('.vista').forEach(x => x.classList.remove('on'));
+  t.classList.add('on');
+  $('#v-' + t.dataset.v).classList.add('on');
+  if (t.dataset.v === 'consola') { cargarDocs(); cargarCobertura(); }
+});
+
+async function api(ruta, opts) {
+  const r = await fetch(API + ruta, opts);
+  if (!r.ok) throw new Error((await r.text()).slice(0, 200));
+  return r.json();
+}
+
+// ---------- salud ----------
+async function salud() {
+  try {
+    const s = await api('/salud');
+    $('#salud').textContent = s.documentos + ' documentos · ' + s.fragmentos + ' fragmentos indexados';
+  } catch (e) { $('#salud').textContent = 'sin conexión con el servidor'; }
+}
+
+// ---------- pacientes ----------
+async function pacientes() {
+  const ps = await api('/pacientes');
+  $('#paciente').innerHTML = ps.map(p =>
+    `<option value='${JSON.stringify(p).replace(/'/g,"&#39;")}'>${p.nombre} · ${p.procedimiento} · día ${p.dia_postop} · C.C. ${p.cedula}</option>`).join('');
+}
+
+// ---------- conversación ----------
+function burbuja(quien, texto) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + (quien === 'agente' ? 'ag' : 'pa');
+  d.innerHTML = `<div class="who">${quien === 'agente' ? 'AGENTE' : 'PACIENTE'}</div>${texto}`;
+  $('#chat').appendChild(d);
+  $('#chat').scrollTop = $('#chat').scrollHeight;
+}
+
+function hablar(texto) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang = 'es-CO'; u.rate = 1.02;
+  const v = speechSynthesis.getVoices().find(x => x.lang.startsWith('es'));
+  if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+function pintarTriaje(t) {
+  if (!t) return;
+  $('#triaje').innerHTML =
+    `<span class="badge ${t.criticidad}">${t.criticidad.toUpperCase()}</span>
+     <span class="mut" style="margin-left:10px">acción: ${t.accion}</span>` +
+    (t.alerta_humano ? '<div style="margin-top:8px;color:var(--bad)">⚠ Alertar a personal humano</div>' : '');
+  $('#reglas').innerHTML = (t.motivos || []).map(m =>
+    `<div class="regla">[${m.nivel}] ${m.regla}</div>`).join('');
+}
+
+function pintarSintomas(s) {
+  if (!s) return;
+  const et = {dolor_nrs:'Dolor (0-10)', fiebre_c:'Temperatura °C', herida:'Herida', movilidad:'Movilidad'};
+  $('#sintomas').innerHTML = Object.keys(et).map(k =>
+    `<div class="kv"><span>${et[k]}</span><span>${s[k] === null || s[k] === undefined
+      ? '<span class="mut">por obtener</span>' : '<b>' + s[k] + '</b>'}</span></div>`).join('');
+}
+
+function pintarFuentes(f) {
+  $('#fuentes').innerHTML = (f && f.length)
+    ? f.map(x => `<div class="fuente"><b>${x.documento}</b>
+       <span class="mut">· score ${x.score}</span><br>${x.texto.slice(0,150)}…</div>`).join('')
+    : '<span class="mut">Sin fuentes por encima del umbral de fundamento</span>';
+}
+
+function pintarResumen(r) {
+  if (!r) return;
+  const m = r.metricas || {};
+  $('#resumen').innerHTML =
+    `<div class="kv"><span>Criticidad</span><span class="badge ${r.criticidad}">${r.criticidad}</span></div>
+     <div class="kv"><span>Turnos</span><span>${m.turnos_totales}</span></div>
+     <div class="kv"><span>Invocaciones al LLM</span><span>${m.invocaciones_llm}</span></div>
+     <div class="kv"><span>Latencia LLM P50</span><span>${m.latencia_llm_p50_ms} ms</span></div>
+     <div class="kv"><span>Latencia LLM P95</span><span>${m.latencia_llm_p95_ms} ms</span></div>
+     <div class="kv"><span>Tokens entrada / salida</span><span>${m.tokens_entrada} / ${m.tokens_salida}</span></div>
+     <div class="kv"><span>Documentos citados</span><span>${(r.fuentes_citadas||[]).length}</span></div>`;
+}
+
+$('#btnIniciar').onclick = async () => {
+  const p = JSON.parse($('#paciente').value);
+  $('#chat').innerHTML = ''; $('#estado').textContent = 'Conectando…';
+  $('#btnIniciar').disabled = true;
+  try {
+    const r = await api('/llamada/iniciar', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({paciente_id:p.paciente_id, procedimiento:p.procedimiento, dia_postop:p.dia_postop})});
+    llamadaId = r.llamada_id;
+    burbuja('agente', r.texto); hablar(r.texto);
+    pintarTriaje(r.triaje);
+    if (r.termino) {
+      $('#estado').innerHTML = '<b style="color:var(--bad)">Llamada cerrada: sin cobertura clínica para este procedimiento</b>';
+      $('#btnIniciar').disabled = false;
+    } else {
+      $('#estado').textContent = 'En llamada · campo en curso: ' + r.campo_en_curso;
+      $('#btnColgar').disabled = false; $('#btnMic').disabled = false;
+      $('#txt').disabled = false; $('#txt').focus();
+    }
+  } catch (e) { $('#estado').textContent = 'Error: ' + e.message; $('#btnIniciar').disabled = false; }
+};
+
+async function enviar(texto) {
+  if (!texto || !llamadaId) return;
+  burbuja('paciente', texto);
+  $('#estado').textContent = 'Procesando…';
+  try {
+    const r = await api('/llamada/turno', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({llamada_id: llamadaId, texto})});
+    burbuja('agente', r.texto); hablar(r.texto);
+    pintarTriaje(r.triaje); pintarSintomas(r.sintomas); pintarFuentes(r.fuentes);
+    if (r.rechazos && r.rechazos.length)
+      $('#estado').innerHTML = '<span style="color:var(--warn)">Valor rechazado por el validador: '
+        + r.rechazos.map(x => x.campo + '=' + x.valor).join(', ') + '</span>';
+    if (r.termino) {
+      pintarResumen(r.resumen);
+      $('#estado').innerHTML = '<b>Llamada finalizada</b>';
+      $('#btnColgar').disabled = true; $('#btnMic').disabled = true;
+      $('#txt').disabled = true; $('#btnIniciar').disabled = false; llamadaId = null;
+    } else if (!r.rechazos || !r.rechazos.length) {
+      $('#estado').textContent = 'En llamada · campo en curso: ' + r.campo_en_curso;
+    }
+  } catch (e) { $('#estado').textContent = 'Error: ' + e.message; }
+}
+
+$('#txt').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.value.trim()) { const v = e.target.value.trim(); e.target.value=''; enviar(v); }
+});
+
+$('#btnColgar').onclick = async () => {
+  if (llamadaId) { try { pintarResumen(await api('/llamada/' + llamadaId + '/resumen')); } catch(e){} }
+  llamadaId = null; $('#btnColgar').disabled = true; $('#btnMic').disabled = true;
+  $('#txt').disabled = true; $('#btnIniciar').disabled = false;
+  $('#estado').textContent = 'Llamada terminada';
+};
+
+// ---------- reconocimiento de voz ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SR) {
+  recog = new SR(); recog.lang = 'es-CO'; recog.interimResults = false; recog.continuous = false;
+  recog.onresult = e => enviar(e.results[0][0].transcript);
+  recog.onend = () => { escuchando = false; $('#btnMic').textContent = '🎤 Hablar'; $('#btnMic').classList.remove('rec'); };
+  recog.onerror = ev => { $('#estado').textContent = 'Micrófono: ' + ev.error; };
+} else {
+  $('#btnMic').title = 'Este navegador no soporta Web Speech API. Use Chrome o Edge.';
+}
+$('#btnMic').onclick = () => {
+  if (!recog) { alert('Su navegador no soporta reconocimiento de voz. Use Chrome o Edge.'); return; }
+  if (escuchando) { recog.stop(); return; }
+  speechSynthesis.cancel();
+  recog.start(); escuchando = true;
+  $('#btnMic').textContent = '⏹ Detener'; $('#btnMic').classList.add('rec');
+};
+
+// ---------- consola ----------
+async function cargarDocs() {
+  const d = await api('/admin/documentos');
+  const f = $('#filtro').value.toLowerCase();
+  $('#docs').innerHTML = d.filter(x => !f || x.nombre.toLowerCase().includes(f)).map(x => `
+    <tr><td>${x.nombre}</td><td class="mut">${x.area}</td><td>${x.fragmentos}</td>
+    <td>${x.escaneado ? '<span class="pill no">sin capa de texto</span>'
+                      : '<span class="pill">procesado y disponible</span>'}</td>
+    <td><button class="sec" onclick="borrar(${x.id})">Eliminar</button></td></tr>`).join('');
+  salud();
+}
+$('#filtro').oninput = cargarDocs;
+$('#btnRefrescar').onclick = cargarDocs;
+
+async function borrar(id) {
+  if (!confirm('¿Eliminar este documento? El agente lo olvidará de inmediato.')) return;
+  const r = await api('/admin/documentos/' + id, {method:'DELETE'});
+  $('#subida').innerHTML = `<span style="color:var(--warn)">Documento eliminado · índice reconstruido: ${r.fragmentos_indexados} fragmentos</span>`;
+  cargarDocs(); cargarCobertura();
+}
+
+$('#dz').onclick = () => $('#file').click();
+$('#dz').ondragover = e => { e.preventDefault(); $('#dz').style.borderColor = 'var(--acc)'; };
+$('#dz').ondragleave = () => $('#dz').style.borderColor = '';
+$('#dz').ondrop = e => { e.preventDefault(); $('#dz').style.borderColor=''; subir(e.dataTransfer.files[0]); };
+$('#file').onchange = e => subir(e.target.files[0]);
+
+async function subir(f) {
+  if (!f) return;
+  $('#subida').textContent = 'Procesando ' + f.name + '…';
+  const fd = new FormData(); fd.append('archivo', f); fd.append('area', 'cargado');
+  try {
+    const r = await api('/admin/documentos', {method:'POST', body: fd});
+    const est = {indexado:'procesado y disponible', duplicado:'ya estaba en la base',
+                 sin_texto:'sin capa de texto — requiere OCR', error:'error'}[r.estado] || r.estado;
+    $('#subida').innerHTML = `<b>${r.nombre}</b> · <span class="pill${r.estado==='indexado'?'':' no'}">${est}</span>
+      · ${r.fragmentos} fragmentos · índice: ${r.fragmentos_indexados}`;
+    cargarDocs();
+  } catch (e) { $('#subida').innerHTML = '<span style="color:var(--bad)">Error: ' + e.message + '</span>'; }
+}
+
+$('#btnCorpus').onclick = async () => {
+  $('#subida').textContent = 'Ingiriendo el corpus del reto… puede tardar ~80 segundos';
+  const fd = new FormData(); fd.append('ruta', 'kit/dataset/textos');
+  try {
+    const r = await api('/admin/corpus/cargar', {method:'POST', body: fd});
+    $('#subida').innerHTML = 'Corpus procesado: ' + JSON.stringify(r.resumen)
+      + ' · ' + r.fragmentos_indexados + ' fragmentos';
+    cargarDocs(); cargarCobertura();
+  } catch (e) { $('#subida').innerHTML = '<span style="color:var(--bad)">Error: ' + e.message + '</span>'; }
+};
+
+async function cargarCobertura() {
+  const c = await api('/procedimientos');
+  $('#cobertura').innerHTML = c.map(x => `<tr><td>${x.procedimiento}</td>
+    <td>${x.cobertura ? '<span class="pill">con corpus</span>' : '<span class="pill no">sin corpus</span>'}</td>
+    <td class="mut">${x.area || x.motivo}</td></tr>`).join('');
+}
+
+salud(); pacientes();
+if (window.speechSynthesis) speechSynthesis.getVoices();
+</script>
+</body>
+</html>
