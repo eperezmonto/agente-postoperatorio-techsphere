@@ -360,8 +360,9 @@ introducia 3 amarillos degradados a verde. **Se descarto.**
 **Cierre por signo de alarma: implementado, no verificado en ejecucion.** Cuando el triaje
 detecta un signo de alarma real —fiebre >= 38, dolor >= 8, secrecion purulenta—, seguir el
 guion es clinicamente incorrecto, y el sistema cierra la llamada y escala de inmediato.
-La logica del motor de triaje se verifico de forma aislada. **El flujo completo en
-ejecucion no alcanzo a probarse antes de la entrega** y se reporta como tal.
+Verificado en ejecucion: en una llamada por voz con dolor 10/10 y fiebre 39 grados,
+el agente cerro la llamada de inmediato, informo que un profesional de salud contactaria
+al paciente, y no continuo preguntando por herida ni movilidad.
 
 ---
 
