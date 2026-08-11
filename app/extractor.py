@@ -17,6 +17,8 @@ import time
 
 import requests
 
+from . import numeros
+
 OLLAMA = "http://localhost:11434"
 MODELO = "llama3.2:3b"
 NUM_CTX = 2048
@@ -145,7 +147,23 @@ def _llamar(prompt, num_predict, temperatura, modelo, timeout):
 
 
 def extraer_campo(campo, texto_paciente, modelo=MODELO, timeout=120):
-    """Extrae UN campo. Devuelve (bruto_o_None, metricas)."""
+    """Extrae UN campo. Devuelve (bruto_o_None, metricas).
+
+    Los campos numericos se resuelven primero con reglas deterministas: un numero
+    no necesita un modelo de lenguaje, y el LLM fallaba ante respuestas escuetas
+    como "9". Solo si las reglas no encuentran cifra se consulta al modelo.
+    """
+    if campo == "dolor_nrs":
+        v = numeros.dolor(texto_paciente)
+        if v is not None:
+            return {"dolor_nrs": v}, {"error": None, "modelo": "reglas",
+                                      "latencia_ms": 0, "tokens_in": 0, "tokens_out": 0}
+    elif campo == "fiebre_c":
+        v = numeros.temperatura(texto_paciente)
+        if v is not None:
+            return {"fiebre_c": v}, {"error": None, "modelo": "reglas",
+                                     "latencia_ms": 0, "tokens_in": 0, "tokens_out": 0}
+
     if campo not in PROMPTS:
         return None, {"error": "campo desconocido: %s" % campo, "modelo": modelo,
                       "latencia_ms": 0, "tokens_in": 0, "tokens_out": 0}

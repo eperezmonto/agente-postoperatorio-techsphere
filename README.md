@@ -9,7 +9,7 @@ fundamenta sus respuestas en un corpus clinico y decide cuando alertar a persona
 |---|---|
 | Informe final | [`INFORME.md`](INFORME.md) |
 | Diagrama de arquitectura | [`DIAGRAMA.md`](DIAGRAMA.md) · también incluido abajo |
-| Video demo | *(pendiente: se agrega antes de la entrega)* |
+| Video demo | [Demo funcional](https://youtu.be/iBF1ub5_yKQ) · [Preguntas de cierre](https://youtu.be/F4gLZ6xAQxA) |
 | Metricas medidas | [`METRICAS.md`](METRICAS.md) |
 
 ---

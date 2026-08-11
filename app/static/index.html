@@ -238,9 +238,19 @@ function pintarResumen(r) {
      <div class="kv"><span>Documentos citados</span><span>${(r.fuentes_citadas||[]).length}</span></div>`;
 }
 
+function limpiarPaneles() {
+  $('#chat').innerHTML = '';
+  $('#triaje').innerHTML = '<span class="mut">Sin datos aún</span>';
+  $('#reglas').innerHTML = '';
+  $('#sintomas').innerHTML = '<span class="mut">—</span>';
+  $('#fuentes').innerHTML = '<span class="mut">—</span>';
+  $('#resumen').innerHTML = '<span class="mut">Al cerrar la llamada</span>';
+}
+
 $('#btnIniciar').onclick = async () => {
   const p = JSON.parse($('#paciente').value);
-  $('#chat').innerHTML = ''; $('#estado').textContent = 'Conectando…';
+  limpiarPaneles();
+  $('#estado').textContent = 'Conectando…';
   $('#btnIniciar').disabled = true;
   try {
     const r = await api('/llamada/iniciar', {method:'POST',
